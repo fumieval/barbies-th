@@ -34,3 +34,7 @@ instance ProductBC (Foo Covered)
 
 GHC sometimes takes very long time to compile code with generically derived instances, and it often fails to inline functions properly too. This package generates most instance methods by TH, reducing large amount of compilation time
 of the declarations and use sites.
+
+Unlike [higgledy](https://hackage.haskell.org/package/higgledy) which relies on
+in-memory representation using `GHC.Generic`, you don't have to worry about the performance, and you can benefit from various language features
+(e.g. -Wmissing-fields, `RecordWildCards` etc) even in higher-kinded form.
