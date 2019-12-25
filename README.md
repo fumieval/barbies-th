@@ -24,8 +24,11 @@ instance FieldNamesB (Foo Covered) where
 instance ProductB (Foo Covered) where
   bprod (Foo xfoo xbar) (Foo yfoo ybar)
     = Foo (Pair xfoo yfoo) (Pair xbar ybar)
-instance FunctorB (Foo Covered)
-instance TraversableB (Foo Covered)
+instance FunctorB (Foo Covered) where ...
+instance TraversableB (Foo Covered) where ...
 instance ConstraintsB (Foo Covered)
 instance ProductBC (Foo Covered)
 ```
+
+GHC sometimes takes very long time to compile code with generically derived instances, and it often fails to inline functions properly too. This package generates most instance methods by TH, reducing large amount of compilation time
+of the declarations and use sites.

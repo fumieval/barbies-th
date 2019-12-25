@@ -10,7 +10,7 @@ author:              Fumiaki Kinoshita
 maintainer:          fumiexcel@gmail.com
 copyright:           Copyright (c) 2019 Fumiaki Kinoshita
 category:            Data, Generics
-extra-source-files:  CHANGELOG.md
+extra-source-files:  CHANGELOG.md, README.md
 
 library
   exposed-modules:     Data.Barbie.TH
