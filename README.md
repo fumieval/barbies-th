@@ -3,7 +3,7 @@ barbies-th
 
 [![Hackage](https://img.shields.io/hackage/v/barbies-th.svg)](https://hackage.haskell.org/package/barbies-th)
 
-A wrapper library for barbies to generate [strippable HKD](http://hackage.haskell.org/package/barbies-1.1.3.0/docs/Data-Barbie-Bare.html)s. The following declaration
+A wrapper library for [barbies](http://hackage.haskell.org/package/barbies) to generate [strippable HKD](http://hackage.haskell.org/package/barbies-1.1.3.0/docs/Data-Barbie-Bare.html)s. It transforms the following declaration
 
 ```haskell
 declareBareB [d|
@@ -13,7 +13,7 @@ declareBareB [d|
     }  |]
 ```
 
-creates:
+into:
 
 ```haskell
 data Foo sw h = Foo
