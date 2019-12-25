@@ -1,6 +1,8 @@
 barbies-th
 ====
 
+[![Hackage](https://img.shields.io/hackage/v/barbies-th.svg)](https://hackage.haskell.org/package/barbies-th)
+
 A wrapper library for barbies to generate strippable HKDs. The following declaration
 
 ```haskell
