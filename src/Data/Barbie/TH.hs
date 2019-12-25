@@ -19,9 +19,11 @@ import Data.String
 import Data.Foldable (foldl')
 import Data.Barbie
 import Data.Barbie.Bare
+import Data.Barbie.Internal
 import Data.Functor.Product
 import GHC.Generics (Generic)
 import Control.Applicative
+import Data.Functor.Identity (Identity(..))
 
 -- | barbies doesn't care about field names, but they are useful in many use cases
 class FieldNamesB b where
@@ -54,18 +56,40 @@ declareBareB decsQ = do
       let transformed = transformCon varS varW con
       let names = foldl' AppE (ConE conName) [AppE (ConE 'Const) $ AppE (VarE 'fromString) $ LitE $ StringL $ nameBase name | (name, _, _) <- fields]
       let datC = conT dataName `appT` conT ''Covered
-      let bprodBody = foldl
-            (\r (x, y) -> [|$(r) (Pair $(varE x) $(varE y))|])
-            (conE conName) (zip xs ys)
       decs <- [d|
-        instance BareB $(conT dataName)
+        instance BareB $(conT dataName) where
+          bcover $(conP conName $ map varP xs) = $(foldl'
+              appE
+              (conE conName)
+              (appE (conE 'Identity) . varE <$> xs)
+            )
+          {-# INLINE bcover #-}
+          bstrip $(conP conName $ map varP xs) = $(foldl'
+              appE
+              (conE conName)
+              (appE (varE 'runIdentity) . varE <$> xs)
+            )
+          {-# INLINE bstrip #-}
         instance FieldNamesB $(datC) where bfieldNames = $(pure names)
-        instance FunctorB $(datC)
-        instance TraversableB $(datC)
+        instance FunctorB $(datC) where
+          bmap f $(conP conName $ map varP xs) = $(foldl'
+              appE
+              (conE conName)
+              (appE (varE 'f) . varE <$> xs)
+            )
+        instance TraversableB $(datC) where
+          btraverse f $(conP conName $ map varP xs) = $(fst $ foldl'
+              (\(l, op) r -> (infixE (Just l) (varE op) (Just r), '(<*>)))
+              (conE conName, '(<$>))
+              (appE (varE 'f) . varE <$> xs)
+            )
+          {-# INLINE btraverse #-}
         instance ConstraintsB $(datC)
         instance ProductBC $(datC)
         instance ProductB $(datC) where
-          bprod $(conP conName $ map varP xs) $(conP conName $ map varP ys) = $(bprodBody)
+          bprod $(conP conName $ map varP xs) $(conP conName $ map varP ys) = $(foldl'
+            (\r (x, y) -> [|$(r) (Pair $(varE x) $(varE y))|])
+            (conE conName) (zip xs ys))
         |]
       return $ DataD [] dataName
         (tvbs ++ [PlainTV varS, PlainTV varW])
