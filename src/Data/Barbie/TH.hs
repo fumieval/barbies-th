@@ -19,7 +19,6 @@ import Data.String
 import Data.Foldable (foldl')
 import Data.Barbie
 import Data.Barbie.Bare
-import Data.Barbie.Internal
 import Data.Functor.Product
 import GHC.Generics (Generic)
 import Control.Applicative
