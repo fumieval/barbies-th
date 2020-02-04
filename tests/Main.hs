@@ -8,8 +8,8 @@
 module Main where
 import Data.Barbie.TH
 import GHC.Generics
-import Data.Barbie
-import Data.Barbie.Bare
+import Barbies
+import Barbies.Bare
 declareBareB [d|
   data Foo = Foo
     { foo :: Int
