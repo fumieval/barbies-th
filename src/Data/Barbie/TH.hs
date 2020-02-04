@@ -54,9 +54,20 @@ declareBareB decsQ = do
       let ys = varNames "y" fields
       let transformed = transformCon varS varW con
       let names = foldl' AppE (ConE conName) [AppE (ConE 'Const) $ AppE (VarE 'fromString) $ LitE $ StringL $ nameBase name | (name, _, _) <- fields]
-      let datC = conT dataName `appT` conT ''Covered
+
+          -- Turn TyVarBndr into just a Name such that we can
+          -- reconstruct the constructor applied to already-present
+          -- type variables below.
+          varName (PlainTV n) = n
+          varName (KindedTV n _) = n
+
+          -- The type name as present originally along with its type
+          -- variables.
+          vanillaType = foldl' appT (conT dataName) (varT . varName <$> tvbs)
+
+      let datC = vanillaType `appT` conT ''Covered
       decs <- [d|
-        instance BareB $(conT dataName) where
+        instance BareB $(vanillaType) where
           bcover $(conP conName $ map varP xs) = $(foldl'
               appE
               (conE conName)
