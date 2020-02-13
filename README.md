@@ -2,6 +2,7 @@ barbies-th
 ====
 
 [![Hackage](https://img.shields.io/hackage/v/barbies-th.svg)](https://hackage.haskell.org/package/barbies-th)
+![Haskell CI](https://github.com/fumieval/barbies-th/workflows/Haskell%20CI/badge.svg)
 
 A wrapper library for [barbies](http://hackage.haskell.org/package/barbies) to generate [strippable HKD](http://hackage.haskell.org/package/barbies-1.1.3.0/docs/Data-Barbie-Bare.html)s. It transforms the following declaration
 
