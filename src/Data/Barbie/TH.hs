@@ -2,6 +2,8 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
@@ -47,7 +49,7 @@ declareBareB decsQ = do
   decs' <- traverse go decs
   return $ concat decs'
   where
-    go (DataD _ dataName tvbs _ [con@(RecC conName fields)] drv) = do
+    go (DataD _ dataName tvbs _ [con@(RecC conName fields)] classes) = do
       varS <- newName "sw"
       varW <- newName "h"
       let xs = varNames "x" fields
@@ -100,12 +102,16 @@ declareBareB decsQ = do
             (\r (x, y) -> [|$(r) (Pair $(varE x) $(varE y))|])
             (conE conName) (zip xs ys))
         |]
+      drvs <- traverse (\cls ->
+        [d|deriving via Barbie $(datC) $(varT varW)
+            instance ($(cls) (Barbie $(datC) $(varT varW))) => $(cls) ($(datC) $(varT varW))|])
+        [ pure t | DerivClause _ preds <- classes, t <- preds ]
       return $ DataD [] dataName
         (tvbs ++ [PlainTV varS, PlainTV varW])
         Nothing
         [transformed]
-        (DerivClause Nothing [ConT ''Generic] : drv)
-        : decs
+        [DerivClause Nothing [ConT ''Generic]]
+        : decs ++ concat drvs
     go d = pure [d]
 
 varNames :: String -> [VarBangType] -> [Name]
