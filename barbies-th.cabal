@@ -17,7 +17,7 @@ library
   other-extensions:    RankNTypes, PolyKinds, DataKinds, KindSignatures, TemplateHaskell, TypeFamilies
   build-depends:       base >= 4.12
     , template-haskell >= 2.14 && <2.16
-    , barbies ^>= 2.0
+    , barbies ^>= 2.0.1
   hs-source-dirs:      src
   default-language:    Haskell2010
   ghc-options: -Wall
