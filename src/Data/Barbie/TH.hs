@@ -25,6 +25,7 @@ import Data.Functor.Product
 import GHC.Generics (Generic)
 import Control.Applicative
 import Data.Functor.Identity (Identity(..))
+import Data.Functor.Compose (Compose(..))
 
 -- | barbies doesn't care about field names, but they are useful in many use cases
 class FieldNamesB b where
@@ -32,8 +33,9 @@ class FieldNamesB b where
   bfieldNames :: IsString a => b (Const a)
 
 -- | Transform a regular Haskell record declaration into HKD form.
--- 'BareB', 'FieldNamesB', 'FunctorB', 'TraversableB', 'ApplicativeB' and
--- 'ConstraintsB' instances are derived.
+-- 'BareB', 'FieldNamesB', 'FunctorB', 'DistributiveB',
+-- 'TraversableB', 'ApplicativeB' and 'ConstraintsB' instances are
+-- derived.
 --
 -- For example,
 --
@@ -88,6 +90,12 @@ declareBareB decsQ = do
               appE
               (conE conName)
               (appE (varE 'f) . varE <$> xs)
+            )
+        instance DistributiveB $(datC) where
+          bdistribute fb = $(foldl'
+              appE
+              (conE conName)
+              [ [| Compose ($(varE fd) <$> fb) |] | (fd, _, _) <- fields ]
             )
         instance TraversableB $(datC) where
           btraverse f $(conP conName $ map varP xs) = $(fst $ foldl'
