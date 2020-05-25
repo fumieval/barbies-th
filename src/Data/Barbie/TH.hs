@@ -16,7 +16,7 @@ module Data.Barbie.TH (FieldNamesB(..)
   ) where
 
 import Language.Haskell.TH hiding (cxt)
-import Language.Haskell.TH.Syntax (VarBangType)
+import Language.Haskell.TH.Syntax (VarBangType, Name(..), mkOccName, occString)
 import Data.String
 import Data.Foldable (foldl')
 import Barbies
@@ -26,6 +26,7 @@ import GHC.Generics (Generic)
 import Control.Applicative
 import Data.Functor.Identity (Identity(..))
 import Data.Functor.Compose (Compose(..))
+import Data.List.Split
 
 -- | barbies doesn't care about field names, but they are useful in many use cases
 class FieldNamesB b where
@@ -95,7 +96,7 @@ declareBareB decsQ = do
           bdistribute fb = $(foldl'
               appE
               (conE conName)
-              [ [| Compose ($(varE fd) <$> fb) |] | (fd, _, _) <- fields ]
+              [ [| Compose ($(varE (unmangle fd)) <$> fb) |] | (fd, _, _) <- fields ]
             )
         instance TraversableB $(datC) where
           btraverse f $(conP conName $ map varP xs) = $(fst $ foldl'
@@ -123,14 +124,14 @@ declareBareB decsQ = do
     go d = pure [d]
 
 varNames :: String -> [VarBangType] -> [Name]
-varNames p vbt = [mkName (p ++ nameBase v) | (v, _, _) <- vbt]
+varNames p vbt = [mkName (p ++ nameBase (unmangle v)) | (v, _, _) <- vbt]
 
 transformCon :: Name -- ^ switch variable
   -> Name -- ^ wrapper variable
   -> Con -- ^ original constructor
   -> Con
 transformCon switchName wrapperName (RecC name xs) = RecC name
-  [(v, b, ConT ''Wear
+  [(unmangle v, b, ConT ''Wear
     `AppT` VarT switchName
     `AppT` VarT wrapperName
     `AppT` t)
@@ -138,3 +139,15 @@ transformCon switchName wrapperName (RecC name xs) = RecC name
   ]
 transformCon var w (ForallC tvbs cxt con) = ForallC tvbs cxt $ transformCon var w con
 transformCon _ _ con = error $ "transformCon: unsupported " ++ show con
+
+-- | Unmangle record field names
+--
+-- When 'DuplicateRecordFields' is turned on, record field names are mangled.
+-- (see https://gitlab.haskell.org/ghc/ghc/-/wikis/records/overloaded-record-fields/duplicate-record-fields#mangling-selector-names)
+-- We undo that because these mangled field names don't round-trip through TH splices.
+unmangle :: Name -> Name
+unmangle (Name occ flavour) = Name occ' flavour
+  where
+    occ' = case wordsBy (== ':') (occString occ) of
+        ["$sel", fd, _qual] -> mkOccName fd
+        _ -> occ
