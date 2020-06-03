@@ -13,7 +13,9 @@ category:            Data, Generics
 extra-source-files:  CHANGELOG.md, README.md
 
 library
-  exposed-modules:     Data.Barbie.TH
+  exposed-modules:
+    Barbies.TH
+    Data.Barbie.TH
   other-extensions:    RankNTypes, PolyKinds, DataKinds, KindSignatures, TemplateHaskell, TypeFamilies
   build-depends:       base >= 4.12
     , template-haskell >= 2.14 && <2.17

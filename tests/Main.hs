@@ -8,7 +8,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS -ddump-splices #-}
 module Main where
-import Data.Barbie.TH
+import Barbies.TH
 import GHC.Generics
 import Barbies
 import Barbies.Bare
