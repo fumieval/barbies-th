@@ -1,5 +1,9 @@
 # Revision history for barbies-th
 
+## 0.1.4
+
+* Renamed `Data.Barbie.TH` to `Barbies.TH`, leaving `Data.Barbie.TH` deprecated
+
 ## 0.1.3
 
 * Added `LensB` and `getLensB`
