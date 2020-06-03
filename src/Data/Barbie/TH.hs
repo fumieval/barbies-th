@@ -12,6 +12,9 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 module Data.Barbie.TH (FieldNamesB(..)
+  , LensB(..)
+  , getLensB
+  , AccessorsB(..)
   , declareBareB
   ) where
 
@@ -27,6 +30,21 @@ import Control.Applicative
 import Data.Functor.Identity (Identity(..))
 import Data.Functor.Compose (Compose(..))
 import Data.List.Split
+
+-- | A pair of a getter and a setter
+-- Not van Laarhoven to avoid dictionary passing
+data LensB b a = LensB
+  { viewB :: forall h. b h -> h a
+  , setB :: forall h. h a -> b h -> b h
+  }
+
+getLensB :: Functor f => LensB b a -> (h a -> f (h a)) -> b h -> f (b h)
+getLensB (LensB v s) f b = (\x -> s x b) <$> f (v b)
+{-# INLINE getLensB #-}
+
+class AccessorsB b where
+  -- | A collection of lenses (getter-setter pairs)
+  baccessors :: b (LensB b)
 
 -- | barbies doesn't care about field names, but they are useful in many use cases
 class FieldNamesB b where
@@ -57,8 +75,14 @@ declareBareB decsQ = do
       varW <- newName "h"
       let xs = varNames "x" fields
       let ys = varNames "y" fields
+      varB <- newName "b"
       let transformed = transformCon varS varW con
       let names = foldl' AppE (ConE conName) [AppE (ConE 'Const) $ AppE (VarE 'fromString) $ LitE $ StringL $ nameBase name | (name, _, _) <- fields]
+          accessors = foldl' appE (conE conName)
+            [ [|LensB
+                $(varE name)
+                (\ $(varP varW) $(varP varB) -> $(recUpdE (varE varB) [pure (name, VarE varW)])) |]
+            | (name, _, _) <- fields]
 
           -- Turn TyVarBndr into just a Name such that we can
           -- reconstruct the constructor applied to already-present
@@ -86,6 +110,7 @@ declareBareB decsQ = do
             )
           {-# INLINE bstrip #-}
         instance FieldNamesB $(datC) where bfieldNames = $(pure names)
+        instance AccessorsB $(datC) where baccessors = $(accessors)
         instance FunctorB $(datC) where
           bmap f $(conP conName $ map varP xs) = $(foldl'
               appE

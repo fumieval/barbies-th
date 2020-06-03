@@ -1,5 +1,10 @@
 # Revision history for barbies-th
 
+## 0.1.3
+
+* Added `LensB` and `getLensB`
+* Now derives `AccessorsB`
+
 ## 0.1.2
 
 * `declareBareB` now derives `DistributiveD`
