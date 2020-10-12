@@ -1,5 +1,9 @@
 # Revision history for barbies-th
 
+## 0.1.5
+
+* It now generates `ConstraintsB` and `ApplicativeB` declarations without generics
+
 ## 0.1.4
 
 * Renamed `Data.Barbie.TH` to `Barbies.TH`, leaving `Data.Barbie.TH` deprecated
