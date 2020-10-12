@@ -23,6 +23,7 @@ import Language.Haskell.TH.Syntax (VarBangType, Name(..), mkOccName, occString)
 import Data.String
 import Data.Foldable (foldl')
 import Barbies
+import Barbies.Constraints
 import Barbies.Bare
 import Data.Functor.Product
 import GHC.Generics (Generic)
@@ -94,6 +95,10 @@ declareBareB decsQ = do
           -- variables.
           vanillaType = foldl' appT (conT dataName) (varT . varName <$> tvbs)
 
+          types = [t | (_, _, t) <- fields]
+
+      varCstr <- newName "c"
+
       let datC = vanillaType `appT` conT ''Covered
       decs <- [d|
         instance BareB $(vanillaType) where
@@ -130,8 +135,15 @@ declareBareB decsQ = do
               (appE (varE 'f) . varE <$> xs)
             )
           {-# INLINE btraverse #-}
-        instance ConstraintsB $(datC)
+        instance ConstraintsB $(datC) where
+          type AllB $(varT varCstr) $(datC) = $(foldl appT (tupleT (length types)) [varT varCstr `appT` pure t | t <- types])
+          baddDicts $(conP conName $ map varP xs) = $(foldl'
+            (\r x -> [|$(r) (Pair Dict $(varE x))|])
+            (conE conName) xs)
         instance ApplicativeB $(datC) where
+          bpure x = $(foldl'
+            (\r _ -> [|$(r) x|])
+            (conE conName) xs)
           bprod $(conP conName $ map varP xs) $(conP conName $ map varP ys) = $(foldl'
             (\r (x, y) -> [|$(r) (Pair $(varE x) $(varE y))|])
             (conE conName) (zip xs ys))
