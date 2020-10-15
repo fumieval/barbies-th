@@ -77,6 +77,7 @@ declareBareB decsQ = do
       let xs = varNames "x" fields
       let ys = varNames "y" fields
       varB <- newName "b"
+      varCstr <- newName "c"
       let transformed = transformCon varS varW con
       let names = foldl' AppE (ConE conName) [AppE (ConE 'Const) $ AppE (VarE 'fromString) $ LitE $ StringL $ nameBase name | (name, _, _) <- fields]
           accessors = foldl' appE (conE conName)
@@ -95,9 +96,12 @@ declareBareB decsQ = do
           -- variables.
           vanillaType = foldl' appT (conT dataName) (varT . varName <$> tvbs)
 
-          types = [t | (_, _, t) <- fields]
-
-      varCstr <- newName "c"
+          -- max arity = 62
+          typeChunks = chunksOf 62 [varT varCstr `appT` pure t | (_, _, t) <- fields]
+          mkConstraints ps = foldl appT (tupleT $ length ps) ps
+          allConstr = case typeChunks of
+            [ps] -> mkConstraints ps
+            pss -> mkConstraints $ map mkConstraints pss
 
       let datC = vanillaType `appT` conT ''Covered
       decs <- [d|
@@ -136,7 +140,7 @@ declareBareB decsQ = do
             )
           {-# INLINE btraverse #-}
         instance ConstraintsB $(datC) where
-          type AllB $(varT varCstr) $(datC) = $(foldl appT (tupleT (length types)) [varT varCstr `appT` pure t | t <- types])
+          type AllB $(varT varCstr) $(datC) = $(allConstr)
           baddDicts $(conP conName $ map varP xs) = $(foldl'
             (\r x -> [|$(r) (Pair Dict $(varE x))|])
             (conE conName) xs)

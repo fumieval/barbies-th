@@ -1,5 +1,9 @@
 # Revision history for barbies-th
 
+## 0.1.6
+
+* Added a workaround to prevent exceeding the max arity of constraint tuples
+
 ## 0.1.5
 
 * It now generates `ConstraintsB` and `ApplicativeB` declarations without generics
