@@ -1,12 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS -ddump-splices #-}
 module Main where
 import Barbies.TH
@@ -17,5 +11,5 @@ declareBareB [d|
   data Foo = Foo
     { foo :: Int
     , bar :: String
-    } deriving (Show, Eq) |]
+    }|]
 main = pure ()

@@ -20,7 +20,7 @@ into:
 data Foo sw h = Foo
     { foo :: Wear sw h Int,
     , bar :: Wear sw h String
-    } deriving Generic
+    }
 instance BareB Foo
 instance FieldNamesB (Foo Covered) where
   bfieldNames = Foo (Const "foo") (Const "bar")
@@ -31,6 +31,14 @@ instance FunctorB (Foo Covered) where ...
 instance TraversableB (Foo Covered) where ...
 instance ConstraintsB (Foo Covered)
 instance ProductBC (Foo Covered)
+```
+
+Typically you need the following extensions to make `declareBareB` work:
+
+```
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
 ```
 
 GHC sometimes takes very long time to compile code with generically derived instances, and it often fails to inline functions properly too. This package generates most instance methods by TH, reducing large amount of compilation time

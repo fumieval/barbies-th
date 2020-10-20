@@ -22,6 +22,7 @@ import Language.Haskell.TH hiding (cxt)
 import Language.Haskell.TH.Syntax (VarBangType, Name(..), mkOccName, occString)
 import Data.String
 import Data.Foldable (foldl')
+import Data.List (partition)
 import Barbies
 import Barbies.Constraints
 import Barbies.Bare
@@ -142,16 +143,17 @@ declareBareB decsQ = do
             (\r (x, y) -> [|$(r) (Pair $(varE x) $(varE y))|])
             (conE nDataCon) (zip xs ys))
         |]
+      let classes' = map (\(DerivClause _ cs) -> partition (== ConT ''Generic) cs) classes
       -- Derive instances via 'Barbie' wrapper instead.
       drvs <- traverse (\cls ->
         [d|deriving via Barbie $(datC) $(varT nWrap)
             instance ($(cls) (Barbie $(datC) $(varT nWrap))) => $(cls) ($(datC) $(varT nWrap))|])
-        [ pure t | DerivClause _ preds <- classes, t <- preds ]
+        [ pure t | (_, preds) <- classes', t <- preds ]
       return $ DataD [] dataName
         (tvbs ++ [PlainTV nSwitch, PlainTV nWrap])
         Nothing
         [transformed]
-        [DerivClause Nothing [ConT ''Generic]]
+        [DerivClause Nothing $ concatMap fst classes']
         : decs ++ concat drvs
     go d = pure [d]
 
