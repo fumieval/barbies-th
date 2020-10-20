@@ -71,19 +71,22 @@ declareBareB decsQ = do
   decs' <- traverse go decs
   return $ concat decs'
   where
-    go (DataD _ dataName tvbs _ [con@(RecC conName fields)] classes) = do
-      varS <- newName "sw"
-      varW <- newName "h"
+    go (DataD _ dataName tvbs _ [con@(RecC nDataCon fields)] classes) = do
+      nSwitch <- newName "sw"
+      nWrap <- newName "h"
       let xs = varNames "x" fields
       let ys = varNames "y" fields
-      varB <- newName "b"
-      varCstr <- newName "c"
-      let transformed = transformCon varS varW con
-      let names = foldl' AppE (ConE conName) [AppE (ConE 'Const) $ AppE (VarE 'fromString) $ LitE $ StringL $ nameBase name | (name, _, _) <- fields]
-          accessors = foldl' appE (conE conName)
+      nData <- newName "b"
+      nConstr <- newName "c"
+      nX <- newName "x"
+      let transformed = transformCon nSwitch nWrap con
+      let reconE = foldl' appE (conE nDataCon)
+          -- field names for FieldNamesB
+          fieldNamesE = reconE [[|Const $ fromString $(litE $ StringL $ nameBase name)|] | (name, _, _) <- fields]
+          accessors = reconE
             [ [|LensB
                 $(varE name)
-                (\ $(varP varW) $(varP varB) -> $(recUpdE (varE varB) [pure (name, VarE varW)])) |]
+                (\ $(varP nX) $(varP nData) -> $(recUpdE (varE nData) [pure (name, VarE nX)])) |]
             | (name, _, _) <- fields]
 
           -- Turn TyVarBndr into just a Name such that we can
@@ -97,7 +100,7 @@ declareBareB decsQ = do
           vanillaType = foldl' appT (conT dataName) (varT . varName <$> tvbs)
 
           -- max arity = 62
-          typeChunks = chunksOf 62 [varT varCstr `appT` pure t | (_, _, t) <- fields]
+          typeChunks = chunksOf 62 [varT nConstr `appT` pure t | (_, _, t) <- fields]
           mkConstraints ps = foldl appT (tupleT $ length ps) ps
           allConstr = case typeChunks of
             [ps] -> mkConstraints ps
@@ -106,58 +109,46 @@ declareBareB decsQ = do
       let datC = vanillaType `appT` conT ''Covered
       decs <- [d|
         instance BareB $(vanillaType) where
-          bcover $(conP conName $ map varP xs) = $(foldl'
-              appE
-              (conE conName)
-              (appE (conE 'Identity) . varE <$> xs)
-            )
+          bcover $(conP nDataCon $ map varP xs)
+            = $(reconE $ appE (conE 'Identity) . varE <$> xs)
           {-# INLINE bcover #-}
-          bstrip $(conP conName $ map varP xs) = $(foldl'
-              appE
-              (conE conName)
-              (appE (varE 'runIdentity) . varE <$> xs)
-            )
+          bstrip $(conP nDataCon $ map varP xs)
+            = $(reconE $ appE (varE 'runIdentity) . varE <$> xs)
           {-# INLINE bstrip #-}
-        instance FieldNamesB $(datC) where bfieldNames = $(pure names)
+        instance FieldNamesB $(datC) where bfieldNames = $(fieldNamesE)
         instance AccessorsB $(datC) where baccessors = $(accessors)
         instance FunctorB $(datC) where
-          bmap f $(conP conName $ map varP xs) = $(foldl'
-              appE
-              (conE conName)
-              (appE (varE 'f) . varE <$> xs)
-            )
+          bmap f $(conP nDataCon $ map varP xs)
+            = $(reconE (appE (varE 'f) . varE <$> xs))
         instance DistributiveB $(datC) where
-          bdistribute fb = $(foldl'
-              appE
-              (conE conName)
+          bdistribute fb = $(reconE
+              -- TODO: NoFieldSelectors
               [ [| Compose ($(varE (unmangle fd)) <$> fb) |] | (fd, _, _) <- fields ]
             )
         instance TraversableB $(datC) where
-          btraverse f $(conP conName $ map varP xs) = $(fst $ foldl'
+          btraverse f $(conP nDataCon $ map varP xs) = $(fst $ foldl'
               (\(l, op) r -> (infixE (Just l) (varE op) (Just r), '(<*>)))
-              (conE conName, '(<$>))
+              (conE nDataCon, '(<$>))
               (appE (varE 'f) . varE <$> xs)
             )
           {-# INLINE btraverse #-}
         instance ConstraintsB $(datC) where
-          type AllB $(varT varCstr) $(datC) = $(allConstr)
-          baddDicts $(conP conName $ map varP xs) = $(foldl'
-            (\r x -> [|$(r) (Pair Dict $(varE x))|])
-            (conE conName) xs)
+          type AllB $(varT nConstr) $(datC) = $(allConstr)
+          baddDicts $(conP nDataCon $ map varP xs)
+            = $(reconE $ map (\x -> [|Pair Dict $(varE x)|]) xs)
         instance ApplicativeB $(datC) where
-          bpure x = $(foldl'
-            (\r _ -> [|$(r) x|])
-            (conE conName) xs)
-          bprod $(conP conName $ map varP xs) $(conP conName $ map varP ys) = $(foldl'
+          bpure $(varP nX) = $(reconE $ varE nX <$ xs)
+          bprod $(conP nDataCon $ map varP xs) $(conP nDataCon $ map varP ys) = $(foldl'
             (\r (x, y) -> [|$(r) (Pair $(varE x) $(varE y))|])
-            (conE conName) (zip xs ys))
+            (conE nDataCon) (zip xs ys))
         |]
+      -- Derive instances via 'Barbie' wrapper instead.
       drvs <- traverse (\cls ->
-        [d|deriving via Barbie $(datC) $(varT varW)
-            instance ($(cls) (Barbie $(datC) $(varT varW))) => $(cls) ($(datC) $(varT varW))|])
+        [d|deriving via Barbie $(datC) $(varT nWrap)
+            instance ($(cls) (Barbie $(datC) $(varT nWrap))) => $(cls) ($(datC) $(varT nWrap))|])
         [ pure t | DerivClause _ preds <- classes, t <- preds ]
       return $ DataD [] dataName
-        (tvbs ++ [PlainTV varS, PlainTV varW])
+        (tvbs ++ [PlainTV nSwitch, PlainTV nWrap])
         Nothing
         [transformed]
         [DerivClause Nothing [ConT ''Generic]]
