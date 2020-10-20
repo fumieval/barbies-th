@@ -1,5 +1,10 @@
 # Revision history for barbies-th
 
+## 0.1.7
+
+* `declareBareB` now generates deriving clauses for the bare type too
+* It no longer adds `deriving Generic` unconditionally
+
 ## 0.1.6
 
 * Added a workaround to prevent exceeding the max arity of constraint tuples
