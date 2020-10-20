@@ -47,3 +47,20 @@ of the declarations and use sites.
 Unlike [higgledy](https://hackage.haskell.org/package/higgledy) which relies on
 in-memory representation using `GHC.Generic`, you don't have to worry about the performance, and you can benefit from various language features
 (e.g. -Wmissing-fields, `RecordWildCards` etc) even in higher-kinded form.
+
+Deriving pass-through
+----
+
+stock deriving does not work on HKDs. Instead, it transforms deriving clauses into standalone ones via the `Barbie` wrapper,
+as well as ones for the `Bare` counterpart. For example,
+
+`data Foo = ... deriving (Show, Eq)`
+
+generates
+
+```
+deriving instance Show (Foo Bare Identity)
+deriving instance Eq (Foo Bare Identity)
+deriving via Barbie (Foo Covered) h instance Show (Barbie (Foo Covered) h) => Show (Foo Covered h)
+deriving via Barbie (Foo Covered) h instance Eq (Barbie (Foo Covered) h) => Eq (Foo Covered h)
+```

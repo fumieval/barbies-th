@@ -143,18 +143,23 @@ declareBareB decsQ = do
             (\r (x, y) -> [|$(r) (Pair $(varE x) $(varE y))|])
             (conE nDataCon) (zip xs ys))
         |]
-      let classes' = map (\(DerivClause _ cs) -> partition (== ConT ''Generic) cs) classes
-      -- Derive instances via 'Barbie' wrapper instead.
-      drvs <- traverse (\cls ->
+      -- strip deriving Generic
+      let classes' = map (\(DerivClause strat cs) -> fmap (DerivClause strat) $ partition (== ConT ''Generic) cs) classes
+      -- For the covered type, derive instances via 'Barbie' wrapper instead.
+      coverDrvs <- traverse (\cls ->
         [d|deriving via Barbie $(datC) $(varT nWrap)
             instance ($(cls) (Barbie $(datC) $(varT nWrap))) => $(cls) ($(datC) $(varT nWrap))|])
-        [ pure t | (_, preds) <- classes', t <- preds ]
+        [ pure t | (_, DerivClause _ preds) <- classes', t <- preds ]
+      -- Redefine instances of the bare type with the original strategy
+      bareDrvs <- traverse (\(strat, cls) ->
+        standaloneDerivWithStrategyD strat (pure []) [t|$(cls) ($(vanillaType) Bare Identity)|])
+        [ (strat, pure t) | (_, DerivClause strat preds) <- classes', t <- preds ]
       return $ DataD [] dataName
         (tvbs ++ [PlainTV nSwitch, PlainTV nWrap])
         Nothing
         [transformed]
         [DerivClause Nothing $ concatMap fst classes']
-        : decs ++ concat drvs
+        : decs ++ concat coverDrvs ++ bareDrvs
     go d = pure [d]
 
 varNames :: String -> [VarBangType] -> [Name]
