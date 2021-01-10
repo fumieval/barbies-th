@@ -86,9 +86,11 @@ declareBareB decsQ = do
           fieldNamesE = reconE [[|Const $ fromString $(litE $ StringL $ nameBase name)|] | (name, _, _) <- fields]
           accessors = reconE
             [ [|LensB
-                $(varE name)
-                (\ $(varP nX) $(varP nData) -> $(recUpdE (varE nData) [pure (name, VarE nX)])) |]
-            | (name, _, _) <- fields]
+                $(varE fd')
+                (\ $(varP nX) $(varP nData) -> $(recUpdE (varE nData) [pure (fd', VarE nX)])) |]
+            | (fd, _, _) <- fields
+            , let fd' = unmangle fd
+            ]
 
           -- Turn TyVarBndr into just a Name such that we can
           -- reconstruct the constructor applied to already-present
