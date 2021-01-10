@@ -17,6 +17,7 @@ module Barbies.TH (FieldNamesB(..)
   , getLensB
   , AccessorsB(..)
   , declareBareB
+  , declareBareBWithOtherBarbies
   ) where
 
 import Language.Haskell.TH hiding (cxt)
@@ -74,10 +75,15 @@ class FieldNamesB b where
 -- @data User t f = User { uid :: Wear t f Int, name :: Wear t f String }@
 --
 declareBareB :: DecsQ -> DecsQ
-declareBareB decsQ = do
+declareBareB = declareBareBWithOtherBarbies []
+
+-- | Like 'declareBareB' except that one can specify the 'Name's of other
+-- barbies. Members with these types won't be wrapped with 'Wear'.
+declareBareBWithOtherBarbies :: [Name] -> DecsQ -> DecsQ
+declareBareBWithOtherBarbies friends decsQ = do
   decs <- decsQ
   let newTypeNames = dataDecNames decs
-  decs' <- traverse (go newTypeNames) decs
+  decs' <- traverse (go (newTypeNames <> friends)) decs
   return $ concat decs'
   where
     go otherBarbieNames (DataD _ dataName tvbs _ [con@(RecC nDataCon mangledfields)] classes) = do
