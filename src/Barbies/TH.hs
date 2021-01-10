@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
@@ -22,7 +23,7 @@ import Language.Haskell.TH hiding (cxt)
 import Language.Haskell.TH.Syntax (VarBangType, Name(..), mkOccName, occString)
 import Data.String
 import Data.Foldable (foldl')
-import Data.List (partition)
+import Data.List (partition, nub)
 import Barbies
 import Barbies.Constraints
 import Barbies.Bare
@@ -32,6 +33,8 @@ import Control.Applicative
 import Data.Functor.Identity (Identity(..))
 import Data.Functor.Compose (Compose(..))
 import Data.List.Split
+import Data.Maybe (mapMaybe)
+import Data.Bool (bool)
 
 -- | A pair of a getter and a setter
 -- Not van Laarhoven to avoid dictionary passing
@@ -39,6 +42,10 @@ data LensB b a = LensB
   { viewB :: forall h. b h -> h a
   , setB :: forall h. h a -> b h -> b h
   }
+
+nestLensB :: (forall h . a h -> (b h -> a h, b h)) -> LensB b c -> LensB a c
+nestLensB l (LensB lv ls) =
+  LensB (lv . snd . l) (\n h -> let (s, x) = l h in s (ls n x))
 
 getLensB :: Functor f => LensB b a -> (h a -> f (h a)) -> b h -> f (b h)
 getLensB (LensB v s) f b = (\x -> s x b) <$> f (v b)
@@ -69,26 +76,52 @@ class FieldNamesB b where
 declareBareB :: DecsQ -> DecsQ
 declareBareB decsQ = do
   decs <- decsQ
-  decs' <- traverse go decs
+  let newTypeNames = dataDecNames decs
+  decs' <- traverse (go newTypeNames) decs
   return $ concat decs'
   where
-    go (DataD _ dataName tvbs _ [con@(RecC nDataCon fields)] classes) = do
+    go otherBarbieNames (DataD _ dataName tvbs _ [con@(RecC nDataCon mangledfields)] classes) = do
+      let fields = [(unmangle name, c, t) | (name, c, t) <- mangledfields]
       nSwitch <- newName "sw"
       nWrap <- newName "h"
       let xs = varNames "x" fields
       let ys = varNames "y" fields
+      -- 'mapMembers' applies one of two functions to elements of a list
+      -- according to whether or not they align with another barbie
+      let otherBarbieMask = [ case t of
+                                ConT n | n `elem` otherBarbieNames -> True
+                                _ -> False
+                            | (_, _, t) <- fields
+                            ]
+      let mapMembers :: (b -> c) -> (b -> c) -> [b] -> [c]
+          mapMembers normal otherBarbie = zipWith (bool normal otherBarbie) otherBarbieMask
       nData <- newName "b"
       nConstr <- newName "c"
       nX <- newName "x"
-      let transformed = transformCon nSwitch nWrap con
+      let transformed = transformCon otherBarbieNames nSwitch nWrap con
       let reconE = foldl' appE (conE nDataCon)
           -- field names for FieldNamesB
-          fieldNamesE = reconE [[|Const $ fromString $(litE $ StringL $ nameBase name)|] | (name, _, _) <- fields]
-          accessors = reconE
-            [ [|LensB
+          fieldNamesE = reconE $ mapMembers
+            (\(name,_,_) -> [|Const $ fromString $(litE $ StringL $ nameBase name)|])
+            (const [|bfieldNames|])
+            fields
+          accessors = reconE $ mapMembers
+            (\name -> [|LensB
                 $(varE name)
                 (\ $(varP nX) $(varP nData) -> $(recUpdE (varE nData) [pure (name, VarE nX)])) |]
-            | (name, _, _) <- fields]
+            )
+            (\name -> [|bmap
+                          (nestLensB
+                             (\ $(varP nData) -> (\ $(varP nX) -> $(recUpdE (varE nData) [pure (name, VarE nX)])
+                                                 ,$(varE name) $(varE nData)
+                                                 )
+                             )
+                          )
+                          baccessors
+                      |]
+            )
+            [name | (name,_,_) <- fields]
+
 
           -- Turn TyVarBndr into just a Name such that we can
           -- reconstruct the constructor applied to already-present
@@ -101,7 +134,11 @@ declareBareB decsQ = do
           vanillaType = foldl' appT (conT dataName) (varT . varName <$> tvbs)
 
           -- max arity = 62
-          typeChunks = chunksOf 62 [varT nConstr `appT` pure t | (_, _, t) <- fields]
+          typeChunks = chunksOf 62 (mapMembers
+              (\t -> varT nConstr `appT` t)
+              (\t -> [t| AllB $(varT nConstr) ($t Covered)|])
+              [pure t | (_, _, t) <- fields]
+            )
           mkConstraints ps = foldl appT (tupleT $ length ps) ps
           allConstr = case typeChunks of
             [ps] -> mkConstraints ps
@@ -111,37 +148,51 @@ declareBareB decsQ = do
       decs <- [d|
         instance BareB $(vanillaType) where
           bcover $(conP nDataCon $ map varP xs)
-            = $(reconE $ appE (conE 'Identity) . varE <$> xs)
+            = $(reconE $ mapMembers (appE (conE 'Identity)) (appE (varE 'bcover)) (varE <$> xs))
           {-# INLINE bcover #-}
           bstrip $(conP nDataCon $ map varP xs)
-            = $(reconE $ appE (varE 'runIdentity) . varE <$> xs)
+            = $(reconE $ mapMembers (appE (varE 'runIdentity)) (appE (varE 'bstrip)) (varE <$> xs))
           {-# INLINE bstrip #-}
         instance FieldNamesB $(datC) where bfieldNames = $(fieldNamesE)
         instance AccessorsB $(datC) where baccessors = $(accessors)
         instance FunctorB $(datC) where
           bmap f $(conP nDataCon $ map varP xs)
-            = $(reconE (appE (varE 'f) . varE <$> xs))
+            = $(reconE (mapMembers (appE (varE 'f)) (appE [|bmap f|]) (varE <$> xs)))
         instance DistributiveB $(datC) where
-          bdistribute fb = $(reconE
+          bdistribute fb = $(reconE $
               -- TODO: NoFieldSelectors
-              [ [| Compose ($(varE (unmangle fd)) <$> fb) |] | (fd, _, _) <- fields ]
+              mapMembers
+                (\fd -> [| Compose ($fd <$> fb) |])
+                (\fd -> [| bdistribute ($fd <$> fb) |])
+                [varE fd | (fd, _, _) <- fields]
             )
         instance TraversableB $(datC) where
           btraverse f $(conP nDataCon $ map varP xs) = $(fst $ foldl'
               (\(l, op) r -> (infixE (Just l) (varE op) (Just r), '(<*>)))
               (conE nDataCon, '(<$>))
-              (appE (varE 'f) . varE <$> xs)
+              (mapMembers (appE (varE 'f)) (\x -> [|btraverse f $x|]) (varE <$> xs))
             )
           {-# INLINE btraverse #-}
         instance ConstraintsB $(datC) where
           type AllB $(varT nConstr) $(datC) = $(allConstr)
           baddDicts $(conP nDataCon $ map varP xs)
-            = $(reconE $ map (\x -> [|Pair Dict $(varE x)|]) xs)
+            = $(reconE $ mapMembers
+                 (\x -> [|Pair Dict $x|])
+                 (\x -> [|baddDicts $x|])
+                 (varE <$> xs)
+               )
         instance ApplicativeB $(datC) where
-          bpure $(varP nX) = $(reconE $ varE nX <$ xs)
+          bpure $(varP nX) = $(reconE $ mapMembers
+                                 (const (varE nX))
+                                 (const [|bpure $(varE nX)|])
+                                 xs
+                              )
           bprod $(conP nDataCon $ map varP xs) $(conP nDataCon $ map varP ys) = $(foldl'
-            (\r (x, y) -> [|$(r) (Pair $(varE x) $(varE y))|])
-            (conE nDataCon) (zip xs ys))
+            (\r (isOtherBarbie, x, y) ->
+              if isOtherBarbie
+                then [|$r (bprod $(varE x) $(varE y))|]
+                else [|$r (Pair $(varE x) $(varE y))|])
+            (conE nDataCon) (zip3 otherBarbieMask xs ys))
         |]
       -- strip deriving Generic
       let classes' = map (\(DerivClause strat cs) -> fmap (DerivClause strat) $ partition (== ConT ''Generic) cs) classes
@@ -160,24 +211,37 @@ declareBareB decsQ = do
         [transformed]
         [DerivClause Nothing $ concatMap fst classes']
         : decs ++ concat coverDrvs ++ bareDrvs
-    go d = pure [d]
+    go _ d = pure [d]
+
+dataDecNames :: [Dec] -> [Name]
+dataDecNames = nub . mapMaybe decName
+ where
+  decName :: Dec -> Maybe Name
+  decName = \case
+    DataD    _ n _ _ _ _ -> Just n
+    _                    -> Nothing
 
 varNames :: String -> [VarBangType] -> [Name]
-varNames p vbt = [mkName (p ++ nameBase (unmangle v)) | (v, _, _) <- vbt]
+varNames p vbt = [mkName (p ++ nameBase v) | (v, _, _) <- vbt]
 
-transformCon :: Name -- ^ switch variable
+transformCon :: [Name] -- ^ Names of other barbies
+  -> Name -- ^ switch variable
   -> Name -- ^ wrapper variable
   -> Con -- ^ original constructor
   -> Con
-transformCon switchName wrapperName (RecC name xs) = RecC name
-  [(unmangle v, b, ConT ''Wear
-    `AppT` VarT switchName
-    `AppT` VarT wrapperName
-    `AppT` t)
+transformCon otherBarbieNames switchName wrapperName (RecC name xs) = RecC
+  name
+  [ (unmangle v, b, t')
   | (v, b, t) <- xs
+  , let
+    t' = case t of
+      ConT n | n `elem` otherBarbieNames ->
+        ConT n `AppT` VarT switchName `AppT` VarT wrapperName
+      _ -> ConT ''Wear `AppT` VarT switchName `AppT` VarT wrapperName `AppT` t
   ]
-transformCon var w (ForallC tvbs cxt con) = ForallC tvbs cxt $ transformCon var w con
-transformCon _ _ con = error $ "transformCon: unsupported " ++ show con
+transformCon otherBarbieNames var w (ForallC tvbs cxt con) =
+  ForallC tvbs cxt $ transformCon otherBarbieNames var w con
+transformCon _ _ _ con = error $ "transformCon: unsupported " ++ show con
 
 -- | Unmangle record field names
 --

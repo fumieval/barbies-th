@@ -64,3 +64,34 @@ deriving instance Eq (Foo Bare Identity)
 deriving via Barbie (Foo Covered) h instance Show (Barbie (Foo Covered) h) => Show (Foo Covered h)
 deriving via Barbie (Foo Covered) h instance Eq (Barbie (Foo Covered) h) => Eq (Foo Covered h)
 ```
+
+Matryoshka barbies
+----
+
+Barbies can contain other barbies if they're declared in the same splice, it
+pretty much works as you'd expect.
+
+```hasklell
+declareBareB [d|
+  data Inner = Inner
+    { inner :: Int
+    }
+  data Outer = Outer
+    { outer :: Inner
+    , other :: Bool
+    }
+|]
+```
+
+into:
+
+```haskell
+data Inner sw h = Inner
+    { inner :: Wear sw h Int
+    }
+data Outer sw h = Outer
+    { outer :: Inner sw h
+    , other :: Wear sw h Bool
+    }
+-- And all the instances as above
+```
