@@ -31,4 +31,10 @@ declareBareB [d|
     } deriving (Show, Eq, Generic)
     |]
 
+declareBareBWithOtherBarbies [''Foo] [d|
+  data Baz = Baz
+    { baz :: Foo
+    }
+    |]
+
 main = pure ()
