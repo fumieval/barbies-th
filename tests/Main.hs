@@ -5,12 +5,14 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# OPTIONS -ddump-splices #-}
 module Main where
 import Barbies.TH
 import GHC.Generics
 import Barbies
 import Barbies.Bare
+
 declareBareB [d|
   data Foo = Foo
     { foo :: Int
