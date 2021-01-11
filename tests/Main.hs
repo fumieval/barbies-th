@@ -18,4 +18,17 @@ declareBareB [d|
     { foo :: Int
     , bar :: String
     } deriving (Show, Eq, Generic)|]
+
+test_con :: Foo Covered []
+test_con = Foo
+  { foo = [0]
+  , bar = ["Haskell"]
+  }
+
+test_sel :: ([Int], [String])
+test_sel = (foo test_con, bar test_con)
+
+test_upd :: Foo Covered []
+test_upd = test_con { foo = [], bar = [] }
+
 main = pure ()
