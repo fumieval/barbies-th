@@ -1,5 +1,12 @@
 # Revision history for barbies-th
 
+## 0.1.8
+
+* `declareBareB` can now generate nested barbies when multiple data declarations are passed (#7)
+* Fixed a bug breaking `AccessorsB` instances when `DuplicateRecordFields` is enabled (#6)
+
+Kudos to Gergő Érdi(@gergoerdi) and Joe Hermaszewski(@expipiplus1)
+
 ## 0.1.7
 
 * `declareBareB` now generates deriving clauses for the bare type too
