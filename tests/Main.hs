@@ -5,6 +5,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- Not required, but it shouldn't break things.
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# OPTIONS -ddump-splices #-}
 module Main where
@@ -18,6 +19,22 @@ declareBareB [d|
     { foo :: Int
     , bar :: String
     } deriving (Show, Eq, Generic)|]
+ 
+declareBareB [d|
+  data Inner = Inner
+    { inner :: Int
+    } deriving (Show, Eq, Generic)
+  data Outer = Outer
+    { outer :: Inner
+    , other :: Bool
+    } deriving (Show, Eq, Generic)
+    |]
+
+declareBareBWithOtherBarbies [''Foo] [d|
+  data Baz = Baz
+    { baz :: Foo
+    }
+    |]
 
 test_con :: Foo Covered []
 test_con = Foo
@@ -32,3 +49,4 @@ test_upd :: Foo Covered []
 test_upd = test_con { foo = [], bar = [] }
 
 main = pure ()
+
