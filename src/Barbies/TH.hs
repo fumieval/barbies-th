@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
@@ -12,6 +13,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE PatternSynonyms #-}
 module Barbies.TH (FieldNamesB(..)
   , LensB(..)
   , getLensB
@@ -132,8 +134,13 @@ declareBareBWithOtherBarbies friends decsQ = do
           -- Turn TyVarBndr into just a Name such that we can
           -- reconstruct the constructor applied to already-present
           -- type variables below.
+#if MIN_VERSION_template_haskell(2,17,0)
+          varName (PlainTV n _) = n
+          varName (KindedTV n _ _) = n
+#else
           varName (PlainTV n) = n
           varName (KindedTV n _) = n
+#endif
 
           -- The type name as present originally along with its type
           -- variables.
@@ -212,7 +219,11 @@ declareBareBWithOtherBarbies friends decsQ = do
         standaloneDerivWithStrategyD strat (pure []) [t|$(cls) ($(vanillaType) Bare Identity)|])
         [ (strat, pure t) | (_, DerivClause strat preds) <- classes', t <- preds ]
       return $ DataD [] dataName
+#if MIN_VERSION_template_haskell(2,17,0)
+        (tvbs ++ [PlainTV nSwitch (), PlainTV nWrap ()])
+#else
         (tvbs ++ [PlainTV nSwitch, PlainTV nWrap])
+#endif
         Nothing
         [transformed]
         [DerivClause Nothing $ concatMap fst classes']
