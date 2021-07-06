@@ -35,7 +35,7 @@ instance ProductBC (Foo Covered)
 
 Typically you need the following extensions to make `declareBareB` work:
 
-```
+```haskell
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -54,11 +54,13 @@ Deriving pass-through
 stock deriving does not work on HKDs. Instead, it transforms deriving clauses into standalone ones via the `Barbie` wrapper,
 as well as ones for the `Bare` counterpart. For example,
 
-`data Foo = ... deriving (Show, Eq)`
+```haskell
+data Foo = ... deriving (Show, Eq)
+```
 
 generates
 
-```
+```haskell
 deriving instance Show (Foo Bare Identity)
 deriving instance Eq (Foo Bare Identity)
 deriving via Barbie (Foo Covered) h instance Show (Barbie (Foo Covered) h) => Show (Foo Covered h)
