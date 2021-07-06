@@ -67,6 +67,8 @@ deriving via Barbie (Foo Covered) h instance Show (Barbie (Foo Covered) h) => Sh
 deriving via Barbie (Foo Covered) h instance Eq (Barbie (Foo Covered) h) => Eq (Foo Covered h)
 ```
 
+Note that `Barbies` module must be imported manually.
+
 Matryoshka barbies
 ----
 
