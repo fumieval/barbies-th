@@ -5,22 +5,21 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE UndecidableInstances #-}
--- Not required, but it shouldn't break things.
-{-# LANGUAGE DuplicateRecordFields #-}
 {-# OPTIONS -ddump-splices #-}
 module Main where
 import Barbies.TH
 import GHC.Generics
 import Barbies
 import Barbies.Bare
+import Data.Functor.Identity
 
-declareBareB [d|
+passthroughBareB [d|
   data Foo = Foo
     { foo :: Int
     , bar :: String
     } deriving (Show, Eq, Generic)|]
 
-declareBareB [d|
+passthroughBareB [d|
   data Inner = Inner
     { inner :: Int
     } deriving (Show, Eq, Generic)
@@ -30,22 +29,19 @@ declareBareB [d|
     } deriving (Show, Eq, Generic)
     |]
 
-declareBareBWithOtherBarbies [''Foo] [d|
-  data Baz = Baz
-    { baz :: Foo
-    }
-    |]
-
-test_con :: Foo Covered []
+test_con :: FooH []
 test_con = Foo
   { foo = [0]
   , bar = ["Haskell"]
   }
 
+test_bare :: Inner
+test_bare = Inner 0 :: InnerB Bare Identity
+
 test_sel :: ([Int], [String])
 test_sel = (foo test_con, bar test_con)
 
-test_upd :: Foo Covered []
+test_upd :: FooH []
 test_upd = test_con { foo = [], bar = [] }
 
 main = pure ()

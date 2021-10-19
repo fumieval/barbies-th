@@ -1,5 +1,9 @@
 # Revision history for barbies-th
 
+## 0.1.9
+
+* Added `passthroughBareB`
+
 ## 0.1.8
 
 * `declareBareB` can now generate nested barbies when multiple data declarations are passed (#7)

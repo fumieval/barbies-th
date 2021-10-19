@@ -33,6 +33,18 @@ instance ConstraintsB (Foo Covered)
 instance ProductBC (Foo Covered)
 ```
 
+`passthroughBareB` generates a type synonym for the bare type,
+preserving the semantics of the original definition.
+
+```haskell
+data FooB sw h = Foo
+    { foo :: Wear sw h Int,
+    , bar :: Wear sw h String
+    }
+type Foo = Foo Bare Identity
+type FooH = Foo Covered
+```
+
 Typically you need the following extensions to make `declareBareB` work:
 
 ```haskell
@@ -67,7 +79,7 @@ deriving via Barbie (Foo Covered) h instance Show (Barbie (Foo Covered) h) => Sh
 deriving via Barbie (Foo Covered) h instance Eq (Barbie (Foo Covered) h) => Eq (Foo Covered h)
 ```
 
-Note that `Barbies` module must be imported manually.
+Note that `Barbies` module must be imported manually in order to make use of coercions.
 
 Matryoshka barbies
 ----
