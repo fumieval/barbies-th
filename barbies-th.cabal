@@ -1,16 +1,25 @@
 cabal-version:       2.4
 name:                barbies-th
-version:             0.1.8
+version:             0.1.9
 synopsis:            Create strippable HKD via TH
 description:         Please see Data.Barbie.TH
-bug-reports:         https://github.com/fumieval/barbies-th
+homepage:            https://github.com/fumieval/barbies-th
+bug-reports:         https://github.com/fumieval/barbies-th/issues
 license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Fumiaki Kinoshita
 maintainer:          fumiexcel@gmail.com
-copyright:           Copyright (c) 2020 Fumiaki Kinoshita
-category:            Data, Generics
-extra-source-files:  CHANGELOG.md, README.md
+copyright:           Copyright (c) 2021 Fumiaki Kinoshita
+category:            Data, Generics, Data Structures
+extra-source-files:
+  CHANGELOG.md
+  README.md
+  cabal.project
+  .gitignore
+
+source-repository head
+  type: git
+  location: https://github.com/fumieval/barbies-th.git
 
 library
   exposed-modules:
