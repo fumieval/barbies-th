@@ -9,10 +9,14 @@ import Language.Haskell.TH
 data DeclareBareBConfig = DeclareBareBConfig
   { friends :: [Name] -- ^ Members with these types won't be wrapped with 'Wear'
   , bareName :: String -> Maybe String
+  -- ^ generate a type synonym for the 'Barbies.Bare.Bare' type?
   , coveredName :: String -> Maybe String
+  -- ^ generate a type synonym for the 'Barbies.Bare.Covered' type?
   , barbieName :: String -> String
+  -- ^ modify the name of the datatype
   }
 
+-- | Does not define any type synonyms
 classic :: DeclareBareBConfig
 classic = DeclareBareBConfig
   { friends = []

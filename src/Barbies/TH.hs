@@ -53,10 +53,12 @@ nestLensB :: (forall h . a h -> (b h -> a h, b h)) -> LensB b c -> LensB a c
 nestLensB l (LensB lv ls) =
   LensB (lv . snd . l) (\n h -> let (s, x) = l h in s (ls n x))
 
+-- | Obtain a van-laarhoven lens (compatible with the lens library) from 'LensB'
 getLensB :: Functor f => LensB b a -> (h a -> f (h a)) -> b h -> f (b h)
 getLensB (LensB v s) f b = (\x -> s x b) <$> f (v b)
 {-# INLINE getLensB #-}
 
+-- | The class of higher-kinded datatypes where lenses can be defined
 class AccessorsB b where
   -- | A collection of lenses (getter-setter pairs)
   baccessors :: b (LensB b)
@@ -92,6 +94,7 @@ passthroughBareB = declareBareBWith passthrough
 declareBareBWithOtherBarbies :: [Name] -> DecsQ -> DecsQ
 declareBareBWithOtherBarbies xs = declareBareBWith classic { friends = xs }
 
+-- | Generate a higher-kinded data declaration using a custom config
 declareBareBWith :: DeclareBareBConfig -> DecsQ -> DecsQ
 declareBareBWith DeclareBareBConfig{..} decsQ = do
   decs <- decsQ
