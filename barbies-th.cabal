@@ -18,7 +18,7 @@ library
     Barbies.TH.Config
     Data.Barbie.TH
   other-extensions:    RankNTypes, PolyKinds, DataKinds, KindSignatures, TemplateHaskell, TypeFamilies
-  build-depends:       base >= 4.12
+  build-depends:       base >= 4.12 && <4.17
     , template-haskell >= 2.14 && <2.18
     , barbies ^>= 2.0.1
     , split ^>= 0.2
