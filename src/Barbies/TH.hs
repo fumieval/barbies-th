@@ -27,9 +27,11 @@ module Barbies.TH (FieldNamesB(..)
 
 import Language.Haskell.TH hiding (cxt)
 import Language.Haskell.TH.Syntax (VarBangType, Name(..), mkOccName, occString)
+import Data.Bifunctor (first)
 import Data.String
 import Data.Foldable (foldl')
 import Data.List (partition, nub)
+import qualified Data.List.NonEmpty as NE
 import Barbies
 import Barbies.Constraints
 import Barbies.Bare
@@ -67,6 +69,9 @@ class AccessorsB b where
 class FieldNamesB b where
   -- | A collection of field names.
   bfieldNames :: IsString a => b (Const a)
+
+  -- | A collection of field names, prefixed by the names of the parent.
+  bnestedFieldNames :: IsString a => b (Const (NE.NonEmpty a))
 
 -- | Transform a regular Haskell record declaration into HKD form.
 -- 'BareB', 'FieldNamesB', 'FunctorB', 'DistributiveB',
@@ -125,9 +130,14 @@ declareBareBWith DeclareBareBConfig{..} decsQ = do
       let transformed = transformCon otherBarbieNames nSwitch nWrap con
       let reconE = foldl' appE (conE nDataCon)
           -- field names for FieldNamesB
+          strLit str = [|fromString $(litE $ StringL str)|]
           fieldNamesE = reconE $ mapMembers
-            (\(name,_,_) -> [|Const $ fromString $(litE $ StringL $ nameBase name)|])
+            (\(name,_,_) -> conE 'Const `appE` strLit (nameBase name))
             (\_ -> [|bfieldNames|])
+            fields
+          nestedFieldNamesE = reconE $ mapMembers
+            (\(name,_,_) -> [|Const $ pure $(strLit $ nameBase name)|])
+            (\(name,_,_) -> [|first (NE.cons $(strLit $ nameBase name)) `bmap` bnestedFieldNames|])
             fields
           accessors = reconE $ mapMembers
             (\name -> [|LensB
@@ -188,7 +198,9 @@ declareBareBWith DeclareBareBConfig{..} decsQ = do
           bstrip $(conP nDataCon $ map varP xs)
             = $(reconE $ mapMembers (appE (varE 'runIdentity)) (appE (varE 'bstrip)) (varE <$> xs))
           {-# INLINE bstrip #-}
-        instance FieldNamesB $(pure coveredType) where bfieldNames = $(fieldNamesE)
+        instance FieldNamesB $(pure coveredType) where
+          bfieldNames = $(fieldNamesE)
+          bnestedFieldNames = $(nestedFieldNamesE)
         instance AccessorsB $(pure coveredType) where baccessors = $(accessors)
         instance FunctorB $(pure coveredType) where
           bmap f $(conP nDataCon $ map varP xs)

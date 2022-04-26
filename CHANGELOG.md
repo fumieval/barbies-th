@@ -1,5 +1,9 @@
 # Revision history for barbies-th
 
+## 0.1.10
+
+* Added `bnestedFieldNames`
+
 ## 0.1.9
 
 * Added `passthroughBareB`
