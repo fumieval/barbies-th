@@ -9,8 +9,13 @@ license:             BSD-3-Clause
 license-file:        LICENSE
 author:              Fumiaki Kinoshita
 maintainer:          fumiexcel@gmail.com
-copyright:           Copyright (c) 2021 Fumiaki Kinoshita
+copyright:           Copyright (c) 2022 Fumiaki Kinoshita
 category:            Data, Generics, Data Structures
+tested-with:
+  GHC ==8.8.4
+   || ==8.10.7
+   || ==9.0.1
+   || ==9.2.2
 extra-source-files:
   CHANGELOG.md
   README.md
