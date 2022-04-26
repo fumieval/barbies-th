@@ -2,7 +2,8 @@
 
 ## 0.1.10
 
-* Added `bnestedFieldNames`
+* Added `bnestedFieldNames` to `FieldNamesB`
+* Made the names of the type parameters customisable via `DeclareBareBConfig`
 
 ## 0.1.9
 
