@@ -111,8 +111,8 @@ declareBareBWith DeclareBareBConfig{..} decsQ = do
     go otherBarbieNames (DataD _ dataName0 tvbs _ [con@(RecC nDataCon mangledfields)] classes) = do
       let dataName = mkName $ barbieName $ nameBase dataName0
       let fields = [(unmangle name, c, t) | (name, c, t) <- mangledfields]
-      nSwitch <- newName "sw"
-      nWrap <- newName "h"
+      nSwitch <- switchName
+      nWrap <- wrapperName
       let xs = varNames "x" fields
       let ys = varNames "y" fields
       -- 'mapMembers' applies one of two functions to elements of a list

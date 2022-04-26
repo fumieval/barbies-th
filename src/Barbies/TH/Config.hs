@@ -14,6 +14,10 @@ data DeclareBareBConfig = DeclareBareBConfig
   -- ^ generate a type synonym for the 'Barbies.Bare.Covered' type?
   , barbieName :: String -> String
   -- ^ modify the name of the datatype
+  , switchName :: Q Name
+  -- ^ the name of the type parameter to toggle between Bare and covered
+  , wrapperName :: Q Name
+  -- ^ the name of the type parameter of the wrapper for each field
   }
 
 -- | Does not define any type synonyms
@@ -23,6 +27,8 @@ classic = DeclareBareBConfig
   , bareName = const Nothing
   , coveredName = const Nothing
   , barbieName = id
+  , switchName = newName "sw"
+  , wrapperName = newName "h"
   }
 
 -- | Defines a synonym for the bare type with the same name.
@@ -33,4 +39,6 @@ passthrough = DeclareBareBConfig
   , bareName = Just
   , coveredName = Just . (++"H")
   , barbieName = (++"B")
+  , switchName = newName "sw"
+  , wrapperName = newName "h"
   }
