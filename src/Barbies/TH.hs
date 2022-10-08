@@ -214,11 +214,14 @@ declareBareBWith DeclareBareBConfig{..} decsQ = do
                 [varE fd | (fd, _, _) <- fields]
             )
         instance TraversableB $(pure coveredType) where
-          btraverse f $(conP nDataCon $ map varP xs) = $(fst $ foldl'
-              (\(l, op) r -> (infixE (Just l) (varE op) (Just r), '(<*>)))
-              (conE nDataCon, '(<$>))
-              (mapMembers (appE (varE 'f)) (\x -> [|btraverse f $x|]) (varE <$> xs))
-            )
+          btraverse f $(conP nDataCon $ map varP xs) = $(
+              case xs of
+                [] -> appE (varE 'pure) (conE nDataCon)
+                _ -> fst $ foldl'
+                       (\(l, op) r -> (infixE (Just l) (varE op) (Just r), '(<*>)))
+                       (conE nDataCon, '(<$>))
+                       (mapMembers (appE (varE 'f)) (\x -> [|btraverse f $x|]) (varE <$> xs))
+                     )
           {-# INLINE btraverse #-}
         instance ConstraintsB $(pure coveredType) where
           type AllB $(varT nConstr) $(pure coveredType) = $(allConstr)
@@ -255,9 +258,9 @@ declareBareBWith DeclareBareBConfig{..} decsQ = do
         [ (strat, pure t) | (_, DerivClause strat preds) <- classes', t <- preds ]
       return $ DataD [] dataName
 #if MIN_VERSION_template_haskell(2,17,0)
-        (tvbs ++ [PlainTV nSwitch (), PlainTV nWrap ()])
+        (tvbs ++ [PlainTV nSwitch (), KindedTV nWrap () (AppT (AppT ArrowT StarT) StarT)])
 #else
-        (tvbs ++ [PlainTV nSwitch, PlainTV nWrap])
+        (tvbs ++ [PlainTV nSwitch, KindedTV nWrap (AppT (AppT ArrowT StarT) StarT)])
 #endif
         Nothing
         [transformed]

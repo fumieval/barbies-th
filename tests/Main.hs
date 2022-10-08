@@ -53,5 +53,8 @@ test_sel = (foo test_con, bar test_con)
 test_upd :: Foo Covered []
 test_upd = test_con { foo = [], bar = [] }
 
+test_empty :: (EmptyRecord Covered [], EmptyRecord Covered Maybe)
+test_empty = (EmptyRecord, EmptyRecord)
+
 main = pure ()
 
