@@ -37,6 +37,10 @@ declareBareBWithOtherBarbies [''Foo] [d|
     }
     |]
 
+declareBareB [d|
+  data EmptyRecord = EmptyRecord {}
+    |]
+
 test_con :: Foo Covered []
 test_con = Foo
   { foo = [0]
