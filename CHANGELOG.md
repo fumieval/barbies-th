@@ -1,5 +1,9 @@
 # Revision history for barbies-th
 
+## 0.1.11
+
+* Relaxed version bounds
+
 ## 0.1.10
 
 * Added `bnestedFieldNames` to `FieldNamesB`
