@@ -1,6 +1,6 @@
 cabal-version:       2.4
 name:                barbies-th
-version:             0.1.10
+version:             0.1.11
 synopsis:            Create strippable HKD via TH
 description:         Please see Data.Barbie.TH
 homepage:            https://github.com/fumieval/barbies-th
