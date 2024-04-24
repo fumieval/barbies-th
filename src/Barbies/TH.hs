@@ -257,7 +257,9 @@ declareBareBWith DeclareBareBConfig{..} decsQ = do
         standaloneDerivWithStrategyD strat (pure []) [t|$(cls) $(pure bareType)|])
         [ (strat, pure t) | (_, DerivClause strat preds) <- classes', t <- preds ]
       return $ DataD [] dataName
-#if MIN_VERSION_template_haskell(2,17,0)
+#if MIN_VERSION_template_haskell(2,21,0)
+        (tvbs ++ [PlainTV nSwitch BndrReq, KindedTV nWrap BndrReq (AppT (AppT ArrowT StarT) StarT)])
+#elif MIN_VERSION_template_haskell(2,17,0)
         (tvbs ++ [PlainTV nSwitch (), KindedTV nWrap () (AppT (AppT ArrowT StarT) StarT)])
 #else
         (tvbs ++ [PlainTV nSwitch, KindedTV nWrap (AppT (AppT ArrowT StarT) StarT)])
